@@ -1,55 +1,64 @@
-import time
 import os
+import json
 import asyncio
+import random
+from threading import Thread
+from flask import Flask
 from google import genai
 from telethon import TelegramClient, events
-from flask import Flask
-from threading import Thread
 
 # ==========================================
-# --- 1. CONFIGURATION (SUJEET KI DETAILS) ---
+# --- 1. CONFIGURATION ---
 # ==========================================
 API_ID = 34012656
 API_HASH = "267f6fe3e9d163e735ad912344a529e7"
 PHONE_NUMBER = "+919250751630" 
-
-# 🔥 ADITI KI INSTA ID 🔥
 IG_USERNAME = "adititiwari99877"
 
-# 🚀 TERE GEMINI API KEYS (FOR 24/7 UNSTOPPABLE AI)
+# 🔥 TERI 7 NAYI GEMINI API KEYS 🔥
 GEMINI_KEYS = [
-    "AIzaSyCot0onrt2TUWUlmwRdEMa9lBneE7PPimE",
-    "AIzaSyC1f4XwpTzfyvDz5nVIsOZ56NfoAFn2Eao",
-    "AIzaSyDVvcRRvqJ5A2ufciPszIDK2Bnh-AIalpE",
-    "AIzaSyDtQWasKFN60nnob04dkLdRTwBqbxw8eUo",
-    "AIzaSyCnRZYWyRDiUJqQAUhWJBcMmDi6gT4Hz4Y",
-    "AIzaSyAJbqJvR26OepEaziS5qBFoMXyH-ij5MLE",
-    "AIzaSyAtdbx_IGjK9zzgOBsuR3ZDcnIBZgCJIcM"
+    "AIzaSyDXmhizAGzHeWRheLmoCFNooYNkXHHPNjM",
+    "AIzaSyCt4A2rXecpXJdZiiFM1hQYg3-yMhjjD1U",
+    "AIzaSyAFAPS53T4w9eRs1lfYA5E1y_6W7wDmKYU",
+    "AIzaSyBn2a16hWa9Za_oL87kmz1XIZNB42-OQKs",
+    "AIzaSyC0ZFNCzrEzsM35fdCxo1z0KIX_Tt4Jnhs",
+    "AIzaSyBrKgXl5mhM-tylHooBloXT9MP1xzCca6E",
+    "AIzaSyBiLOtQdgxu3PMBWX-TWgc0Uf4naa7oxNI"
 ]
 current_key_index = 0
 ai_client = genai.Client(api_key=GEMINI_KEYS[current_key_index])
 
+# ==========================================
+# --- 2. LONG TERM MEMORY SYSTEM ---
+# ==========================================
 user_memory = {}
+MEMORY_FILE = "tg_memory.json"
+
+if os.path.exists(MEMORY_FILE):
+    try:
+        with open(MEMORY_FILE, "r") as f:
+            user_memory = json.load(f)
+    except:
+        user_memory = {}
+
+def save_memory():
+    with open(MEMORY_FILE, "w") as f:
+        json.dump(user_memory, f)
 
 # ==========================================
-# --- 2. ANTI-SLEEP WEB SERVER ---
+# --- 3. ANTI-SLEEP WEB SERVER ---
 # ==========================================
 app = Flask(__name__)
-
 @app.route('/')
-def home():
+def home(): 
     return "Aditi ka Telegram Bot 24/7 Live Hai! 🔥😎"
 
 def run_server():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-def keep_alive():
-    t = Thread(target=run_server)
-    t.start()
-
 # ==========================================
-# --- 3. ADVANCED AI LOGIC (Aditi ka Mastermind) ---
+# --- 4. ADVANCED AI LOGIC (Aditi ka Dimag) ---
 # ==========================================
 def get_aditi_reply(user_id, user_name, user_text):
     global current_key_index, ai_client, user_memory
@@ -58,11 +67,13 @@ def get_aditi_reply(user_id, user_name, user_text):
     if user_id_str not in user_memory:
         user_memory[user_id_str] = []
         
+    # Sirf pichli 10 baatein yaad rakhegi
     if len(user_memory[user_id_str]) > 10:
         user_memory[user_id_str] = user_memory[user_id_str][-10:]
         
     history_text = "\n".join(user_memory[user_id_str])
     
+    # 🎯 TARGET: Ladko ko baaton mein uljhakar Instagram par bhejna
     prompt = f"""
     Tumhara naam Aditi hai. Tum ek 18 saal ki normal, cute aur friendly ladki ho.
     Tumhara EK HI MAIN MOTIVE hai: Samne wale ladke ko baaton mein uljha kar apne Instagram (@{IG_USERNAME}) par lana aur wahan follow karwana.
@@ -89,45 +100,65 @@ def get_aditi_reply(user_id, user_name, user_text):
             )
             reply = response.text.strip()
             
+            # Message save karo
             user_memory[user_id_str].append(f"{user_name}: {user_text}")
             user_memory[user_id_str].append(f"Aditi: {reply}")
+            save_memory()
+            
             return reply
         except Exception as e:
-            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+            error_msg = str(e)
+            if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg or "quota" in error_msg.lower():
                 current_key_index = (current_key_index + 1) % len(GEMINI_KEYS)
                 ai_client = genai.Client(api_key=GEMINI_KEYS[current_key_index])
+                print(f"🔄 Key Switched to Index {current_key_index}")
             else:
+                print(f"❌ AI Error: {e}")
                 break 
                 
     return f"Yaar mera net rula raha hai... tum ek kaam karo mujhe Insta pe hi msg kar do: @{IG_USERNAME}"
 
 # ==========================================
-# --- 4. TELETHON ENGINE ---
+# --- 5. TELETHON ENGINE (Natural Typing) ---
 # ==========================================
-# Ye file 'aditi_session.session' ko use karega jo tune upload ki hai
 client = TelegramClient('aditi_session', API_ID, API_HASH)
 
 @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def handle_new_message(event):
     sender = await event.get_sender()
-    if sender.is_self: return
+    
+    # Agar message khud ka hai, toh ignore karo
+    if sender.is_self: 
+        return
         
     user_id = sender.id
     user_name = sender.first_name or "Yaar"
     user_text = event.raw_text
 
+    print(f"📩 Naya message {user_name} se: {user_text}")
+
+    # 🔥 1. NATURAL READ DELAY (1 se 3 second wait)
+    await asyncio.sleep(random.randint(1, 3))
+    
+    # 🔥 2. TYPING SIMULATION (5 se 10 second)
+    typing_delay = random.randint(5, 10)
     async with client.action(user_id, 'typing'):
-        await asyncio.sleep(4)
-        ai_reply = get_aditi_reply(user_id, user_name, user_text)
+        print(f"✍️ Aditi is typing for {typing_delay}s...")
+        await asyncio.sleep(typing_delay)
         
+        # 🔥 3. GET AI REPLY (Bina bot hang kiye)
+        ai_reply = await asyncio.to_thread(get_aditi_reply, user_id, user_name, user_text)
+        
+    # 🔥 4. SEND REPLY
     await event.reply(ai_reply)
 
 # ==========================================
-# --- 5. RUN ---
+# --- 6. MAIN EXECUTION ---
 # ==========================================
 if __name__ == "__main__":
-    keep_alive() 
-    print("🤖 Real Account Userbot is starting...")
+    Thread(target=run_server, daemon=True).start()
+    
+    print("🤖 Aditi Telegram Userbot is starting...")
     client.start(phone=PHONE_NUMBER)
     print("✅ BHOOM! Aditi ka asli Telegram account LIVE hai!")
     client.run_until_disconnected()
